@@ -3,6 +3,10 @@ from django.contrib.auth.models import User
 from django.utils import timezone
 from django.db.models.signals import post_save
 from django.dispatch import receiver
+import assemblyai as aai
+from django.conf import settings
+from threading import Thread
+import os
 
 # Create your models here.
 
@@ -10,7 +14,7 @@ class ExemplarySpeech(models.Model):
     speaker_name = models.CharField(max_length=255)
     title = models.CharField(max_length=255)
     audio_file = models.FileField(upload_to='exemplary_speeches/')
-    transcript = models.TextField(blank=True)
+    transcript = models.TextField(blank=True, null=True)
     date_delivered = models.DateField(null=True, blank=True)
     occasion = models.CharField(max_length=255, blank=True)
     category = models.CharField(max_length=100, blank=True)
@@ -22,6 +26,38 @@ class ExemplarySpeech(models.Model):
 
     def __str__(self):
         return f"{self.speaker_name} - {self.title}"
+
+    def transcribe_audio(self):
+        if self.audio_file and not self.transcript:
+            try:
+                # Initialize AssemblyAI client
+                aai.settings.api_key = settings.ASSEMBLYAI_API_KEY
+                
+                # Create transcription object
+                transcriber = aai.Transcriber()
+                
+                # Get the full file path
+                file_path = os.path.join(settings.MEDIA_ROOT, self.audio_file.name)
+                
+                # Start transcription with local file
+                transcript = transcriber.transcribe(file_path)
+                
+                if transcript.text:
+                    self.transcript = transcript.text
+                    self.save(update_fields=['transcript'])
+                    print(f"Transcription completed for {self.title}")
+                else:
+                    print(f"No transcript generated for {self.title}")
+                    
+            except Exception as e:
+                print(f"Error transcribing {self.title}: {str(e)}")
+
+    def save(self, *args, **kwargs):
+        is_new = self._state.adding
+        super().save(*args, **kwargs)
+        # Start transcription in background only for new objects
+        if is_new and not self.transcript and 'update_fields' not in kwargs:
+            Thread(target=self.transcribe_audio).start()
 
 class UserSpeech(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE)

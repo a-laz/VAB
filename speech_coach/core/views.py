@@ -6,6 +6,7 @@ from django.shortcuts import get_object_or_404
 from .models import UserSpeech, ExemplarySpeech, UserProfile
 from .serializers import UserSpeechSerializer, ExemplarySpeechSerializer, UserProfileSerializer
 from django.contrib.auth.models import User
+import json
 
 # Create your views here.
 
@@ -36,7 +37,8 @@ def speech_analysis(request, speech_id):
     
     analysis = {
         'status': speech.status,
-        'analysis': speech.get_analysis_summary() if speech.status == 'completed' else None,
+        'metrics': speech.get_analysis_summary() if speech.status == 'completed' else None,
+        'ai_feedback': json.loads(speech.ai_feedback) if speech.ai_feedback else None,
         'similar_speeches': [
             {
                 'id': s[0].id,

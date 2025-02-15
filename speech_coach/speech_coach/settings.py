@@ -140,3 +140,7 @@ MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 ASSEMBLYAI_API_KEY = os.environ.get('ASSEMBLYAI_API_KEY')
 if not ASSEMBLYAI_API_KEY:
     raise ImproperlyConfigured('ASSEMBLYAI_API_KEY environment variable is not set')
+
+OPENAI_API_KEY = os.environ.get('OPENAI_API_KEY')
+if not OPENAI_API_KEY:
+    raise ImproperlyConfigured('OPENAI_API_KEY environment variable is not set')

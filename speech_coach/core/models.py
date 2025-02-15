@@ -11,6 +11,9 @@ import torch
 import torchaudio
 from transformers import Wav2Vec2Model, Wav2Vec2Processor
 import numpy as np
+import openai
+from datetime import datetime
+import json
 
 # Create your models here.
 
@@ -187,6 +190,10 @@ class UserSpeech(models.Model):
     volume_variation = models.JSONField(null=True, blank=True)  # Store volume levels over time
     filler_words = models.JSONField(null=True, blank=True)  # Store filler word counts and timestamps
     clarity_score = models.FloatField(null=True, blank=True)  # Overall clarity score
+    
+    ai_feedback = models.TextField(blank=True, null=True)
+    strengths = models.JSONField(blank=True, null=True)
+    improvement_areas = models.JSONField(blank=True, null=True)
     
     status = models.CharField(
         max_length=20,
@@ -429,16 +436,91 @@ class UserSpeech(models.Model):
                 self.save(update_fields=['status', 'error_message'])
                 print(f"Error generating embedding for {self.title}: {str(e)}")
 
+    def generate_ai_feedback(self):
+        """Generate AI feedback based on speech analysis"""
+        if not self.transcript or self.status != 'completed':
+            return
+            
+        try:
+            client = openai.OpenAI(api_key=settings.OPENAI_API_KEY)
+            
+            # Prepare context for the AI
+            analysis = self.get_analysis_summary()
+            
+            prompt = f"""
+            As a public speaking coach, analyze this speech and provide detailed feedback.
+            
+            Speech Details:
+            - Title: {self.title}
+            - Duration: {len(self.transcript.split()) / (self.words_per_minute or 120):.1f} minutes
+            - Words per minute: {self.words_per_minute}
+            - Clarity score: {self.clarity_score * 100 if self.clarity_score else 0:.1f}%
+            
+            Transcript:
+            {self.transcript}
+            
+            Analysis Metrics:
+            - Pacing: {analysis['pacing']['assessment']}
+            - Pauses: {len(self.pause_duration or [])} significant pauses
+            - Filler Words: {analysis['filler_words']['total_count']} instances
+            - Clarity: {analysis['clarity']['assessment']}
+            
+            Please provide:
+            1. Three key strengths
+            2. Three areas for improvement
+            3. Specific, actionable recommendations
+            4. Overall assessment
+            
+            Format the response as JSON with the following structure:
+            {
+                "strengths": ["strength1", "strength2", "strength3"],
+                "improvements": ["area1", "area2", "area3"],
+                "recommendations": ["rec1", "rec2", "rec3"],
+                "overall_assessment": "detailed assessment"
+            }
+            """
+            
+            response = client.chat.completions.create(
+                model="gpt-4-turbo-preview",
+                messages=[
+                    {"role": "system", "content": "You are an expert public speaking coach with years of experience helping people improve their speaking skills."},
+                    {"role": "user", "content": prompt}
+                ],
+                response_format={ "type": "json_object" }
+            )
+            
+            feedback = response.choices[0].message.content
+            feedback_dict = json.loads(feedback)
+            
+            # Store the feedback
+            self.strengths = feedback_dict['strengths']
+            self.improvement_areas = feedback_dict['improvements']
+            self.ai_feedback = json.dumps({
+                'strengths': feedback_dict['strengths'],
+                'improvements': feedback_dict['improvements'],
+                'recommendations': feedback_dict['recommendations'],
+                'overall_assessment': feedback_dict['overall_assessment'],
+                'generated_at': datetime.now().isoformat()
+            }, indent=2)
+            
+            self.save(update_fields=['strengths', 'improvement_areas', 'ai_feedback'])
+            
+        except Exception as e:
+            print(f"Error generating AI feedback: {str(e)}")
+
     def save(self, *args, **kwargs):
         is_new = self._state.adding
         super().save(*args, **kwargs)
         
         if is_new and 'update_fields' not in kwargs:
-            # Start transcription and embedding generation in background
+            # Start processing chain
             if not self.transcript:
                 Thread(target=self.transcribe_and_analyze).start()
             if not self.embedding:
                 Thread(target=self.generate_audio_embedding).start()
+        elif self.status == 'completed' and not self.ai_feedback:
+            # Generate AI feedback when processing is complete
+            Thread(target=self.generate_ai_feedback).start()
 
     def find_similar_speeches(self, limit=5):
         """Find similar exemplary speeches based on embedding similarity"""

@@ -21,6 +21,9 @@ export default {
                     900: '#0c4a6e',
                 },
             },
+            animation: {
+                'ping': 'ping 2s cubic-bezier(0, 0, 0.2, 1) infinite',
+            },
         },
     },
     plugins: [forms],

@@ -10,14 +10,17 @@ VocalAnalysisBuddy leverages AI to analyze public speaking performances by:
 - Comparing against exemplary speeches
 - Tracking progress over time
 - Offering personalized improvement suggestions
+- Generating intelligent feedback using GPT-4
+- Real-time speech transcription and analysis
 
 ### Key Features
 - Real-time speech analysis
+- Live feedback during presentations
 - Vector similarity search for speech comparison
 - Performance metrics tracking (WPM, filler words, clarity)
 - Database of exemplary speeches
 - AI-powered feedback system
-- Personalized feedback system
+- Personalized improvement recommendations
 
 ## Backend Setup
 
@@ -77,11 +80,17 @@ Analysis & Status:
 - `POST /api/speeches/<id>/retry/` - Retry failed processing
 - `GET /api/user/statistics/` - Get user's speaking statistics
 
+WebSocket Endpoints:
+- Real-time Transcription:
+  - `ws://localhost:8000/ws/speeches/<id>/live/` - Live transcription and analysis
+
 Each speech analysis includes:
-- Pacing (words per minute)
-- Pause detection and analysis
-- Filler word tracking
-- Clarity scoring
+- Real-time transcription
+- Live performance metrics:
+  - Words per minute (WPM)
+  - Pause detection
+  - Filler word tracking
+  - Clarity scoring
 - Similarity comparison with exemplary speeches
 - AI-generated feedback:
   - Key strengths
@@ -89,28 +98,27 @@ Each speech analysis includes:
   - Actionable recommendations
   - Overall assessment
 
-Authentication:
+### Real-time Features
+1. Live Transcription:
+   - Instant speech-to-text conversion
+   - Word-level timestamps
+   - Confidence scores
+
+2. Real-time Analysis:
+   - Live WPM calculation
+   - Immediate filler word detection
+   - Dynamic pause analysis
+   - Continuous clarity assessment
+
+3. Live Feedback:
+   - Instant metric updates
+   - Real-time suggestions
+   - Performance indicators
+
+### Authentication
 - All endpoints require user authentication
-- Responses include processing status and error messages if applicable
-
-### Speech Analysis Features
-1. Audio Processing:
-   - Automatic transcription
-   - Voice embedding generation
-   - Similarity matching
-
-2. Performance Metrics:
-   - Speaking rate (WPM)
-   - Pause analysis
-   - Filler word detection
-   - Clarity scoring
-
-3. AI Feedback:
-   - GPT-4 powered analysis
-   - Contextual recommendations
-   - Progress tracking
-   - Expert coaching insights
-
+- WebSocket connections are authenticated
+- Responses include processing status and error messages
 
 ### Admin Interface
 1. Admin credentials:
@@ -132,6 +140,184 @@ Authentication:
      - Category
 
 Note: These credentials are for development purposes only. Change them in production.
+
+### WebSocket Connection Examples
+
+1. JavaScript WebSocket Client:
+```javascript
+// Initialize WebSocket connection
+const speechId = 123; // Your speech ID
+const socket = new WebSocket(`ws://localhost:8000/ws/speeches/${speechId}/live/`);
+
+// Handle connection open
+socket.onopen = () => {
+    console.log('WebSocket connection established');
+};
+
+// Handle incoming messages
+socket.onmessage = (event) => {
+    const data = JSON.parse(event.data);
+    
+    if (data.type === 'transcription') {
+        // Update UI with transcription
+        console.log('Live transcription:', data.text);
+        console.log('Confidence:', data.confidence);
+        
+        // Handle real-time analysis
+        if (data.analysis) {
+            console.log('Current WPM:', data.analysis.pacing.words_per_minute);
+            console.log('Filler Words:', data.analysis.filler_words.total_count);
+            console.log('Clarity Score:', data.analysis.clarity.score);
+        }
+    }
+};
+
+// Handle errors
+socket.onerror = (error) => {
+    console.error('WebSocket error:', error);
+};
+
+// Handle connection close
+socket.onclose = () => {
+    console.log('WebSocket connection closed');
+};
+
+// Send audio data (example using MediaRecorder)
+navigator.mediaDevices.getUserMedia({ audio: true })
+    .then(stream => {
+        const mediaRecorder = new MediaRecorder(stream);
+        const audioChunks = [];
+
+        mediaRecorder.ondataavailable = (event) => {
+            audioChunks.push(event.data);
+            // Send audio chunk to WebSocket
+            if (socket.readyState === WebSocket.OPEN) {
+                socket.send(event.data);
+            }
+        };
+
+        // Start recording
+        mediaRecorder.start(100); // Capture audio in 100ms chunks
+    })
+    .catch(error => console.error('Error accessing microphone:', error));
+```
+
+2. Python WebSocket Client (for testing):
+```python
+import asyncio
+import websockets
+import json
+import pyaudio
+import wave
+
+async def connect_websocket(speech_id):
+    uri = f"ws://localhost:8000/ws/speeches/{speech_id}/live/"
+    
+    async with websockets.connect(uri) as websocket:
+        print("Connected to WebSocket")
+        
+        # Set up audio capture
+        CHUNK = 1024
+        FORMAT = pyaudio.paFloat32
+        CHANNELS = 1
+        RATE = 16000
+        
+        p = pyaudio.PyAudio()
+        stream = p.open(format=FORMAT,
+                       channels=CHANNELS,
+                       rate=RATE,
+                       input=True,
+                       frames_per_buffer=CHUNK)
+        
+        try:
+            while True:
+                # Capture audio
+                data = stream.read(CHUNK)
+                
+                # Send audio data
+                await websocket.send(data)
+                
+                # Receive transcription
+                response = await websocket.recv()
+                result = json.loads(response)
+                
+                if result['type'] == 'transcription':
+                    print(f"Transcription: {result['text']}")
+                    if result['analysis']:
+                        print(f"WPM: {result['analysis']['pacing']['words_per_minute']}")
+                        print(f"Clarity: {result['analysis']['clarity']['score']}")
+        
+        except KeyboardInterrupt:
+            print("Stopping...")
+        finally:
+            stream.stop_stream()
+            stream.close()
+            p.terminate()
+
+# Run the client
+asyncio.get_event_loop().run_until_complete(
+    connect_websocket(speech_id=123)
+)
+```
+
+3. React Component Example:
+```jsx
+import React, { useEffect, useState } from 'react';
+
+const LiveTranscription = ({ speechId }) => {
+    const [transcript, setTranscript] = useState('');
+    const [analysis, setAnalysis] = useState(null);
+    const [socket, setSocket] = useState(null);
+    
+    useEffect(() => {
+        // Initialize WebSocket
+        const ws = new WebSocket(`ws://localhost:8000/ws/speeches/${speechId}/live/`);
+        
+        ws.onmessage = (event) => {
+            const data = JSON.parse(event.data);
+            if (data.type === 'transcription') {
+                setTranscript(prev => prev + ' ' + data.text);
+                if (data.analysis) {
+                    setAnalysis(data.analysis);
+                }
+            }
+        };
+        
+        setSocket(ws);
+        
+        // Cleanup on unmount
+        return () => {
+            if (ws) ws.close();
+        };
+    }, [speechId]);
+    
+    return (
+        <div>
+            <h2>Live Transcription</h2>
+            <div className="transcript">{transcript}</div>
+            
+            {analysis && (
+                <div className="analysis">
+                    <h3>Real-time Analysis</h3>
+                    <p>Words per minute: {analysis.pacing.words_per_minute}</p>
+                    <p>Clarity score: {analysis.clarity.score}</p>
+                    <p>Filler words: {analysis.filler_words.total_count}</p>
+                </div>
+            )}
+        </div>
+    );
+};
+
+export default LiveTranscription;
+```
+
+These examples demonstrate:
+1. WebSocket connection setup
+2. Audio capture and streaming
+3. Handling real-time transcription results
+4. Processing live analysis updates
+5. Error handling and cleanup
+
 
 ## Frontend Setup
 

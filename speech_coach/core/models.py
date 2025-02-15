@@ -195,6 +195,11 @@ class UserSpeech(models.Model):
     strengths = models.JSONField(blank=True, null=True)
     improvement_areas = models.JSONField(blank=True, null=True)
     
+    # Add to existing fields
+    is_live = models.BooleanField(default=False)
+    live_transcript = models.JSONField(default=dict, blank=True)  # Store live transcription segments
+    live_session_id = models.CharField(max_length=255, blank=True, null=True)
+    
     status = models.CharField(
         max_length=20,
         choices=STATUS_CHOICES,
@@ -540,6 +545,84 @@ class UserSpeech(models.Model):
         # Sort by similarity score
         similarities.sort(key=lambda x: x[1], reverse=True)
         return similarities[:limit]
+
+    def start_live_transcription(self):
+        """Start live transcription session"""
+        try:
+            self.status = 'transcribing'
+            self.is_live = True
+            self.save(update_fields=['status', 'is_live'])
+
+            # Initialize AssemblyAI client
+            aai.settings.api_key = settings.ASSEMBLYAI_API_KEY
+            
+            # Create real-time transcriber
+            transcriber = aai.RealtimeTranscriber(
+                sample_rate=16000,
+                word_boost=['um', 'uh', 'like', 'you know'],
+                language_code='en',
+                enable_partials=True
+            )
+            
+            # Store session ID
+            self.live_session_id = transcriber.session_id
+            self.save(update_fields=['live_session_id'])
+            
+            return transcriber
+            
+        except Exception as e:
+            self.status = 'failed'
+            self.error_message = str(e)
+            self.save(update_fields=['status', 'error_message'])
+            raise e
+
+    def handle_transcription_result(self, result):
+        """Handle incoming transcription result"""
+        if not self.live_transcript:
+            self.live_transcript = {'segments': []}
+            
+        # Add new segment
+        self.live_transcript['segments'].append({
+            'text': result.text,
+            'timestamp': result.timestamp,
+            'confidence': result.confidence,
+            'words': result.words
+        })
+        
+        # Update transcript field with full text
+        self.transcript = ' '.join(
+            segment['text'] for segment in self.live_transcript['segments']
+        )
+        
+        self.save(update_fields=['live_transcript', 'transcript'])
+        
+        # If confidence is good, analyze the segment
+        if result.confidence > 0.8:
+            self._analyze_live_segment(result)
+
+    def _analyze_live_segment(self, result):
+        """Analyze live segment for metrics"""
+        # Update WPM
+        if result.words:
+            duration = (result.words[-1]['end'] - result.words[0]['start']) / 60
+            word_count = len(result.words)
+            current_wpm = word_count / duration if duration > 0 else 0
+            
+            # Rolling average of WPM
+            if self.words_per_minute:
+                self.words_per_minute = (self.words_per_minute + current_wpm) / 2
+            else:
+                self.words_per_minute = current_wpm
+                
+        # Update other metrics
+        self._count_filler_words(result.words)
+        self._analyze_pauses(result.words)
+        self.clarity_score = self._calculate_clarity(result.words)
+        
+        self.save(update_fields=[
+            'words_per_minute', 'filler_words',
+            'pause_duration', 'clarity_score'
+        ])
 
 class UserProfile(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='profile')

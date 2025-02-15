@@ -43,6 +43,7 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'rest_framework',
     'core',
+    'channels',
 ]
 
 MIDDLEWARE = [
@@ -144,3 +145,13 @@ if not ASSEMBLYAI_API_KEY:
 OPENAI_API_KEY = os.environ.get('OPENAI_API_KEY')
 if not OPENAI_API_KEY:
     raise ImproperlyConfigured('OPENAI_API_KEY environment variable is not set')
+
+# Add Channels configuration
+ASGI_APPLICATION = 'speech_coach.asgi.application'
+
+# Channel layers for WebSocket
+CHANNEL_LAYERS = {
+    'default': {
+        'BACKEND': 'channels.layers.InMemoryChannelLayer'
+    }
+}

@@ -7,6 +7,8 @@ from .models import UserSpeech, ExemplarySpeech, UserProfile
 from .serializers import UserSpeechSerializer, ExemplarySpeechSerializer, UserProfileSerializer
 from django.contrib.auth.models import User
 import json
+from channels.generic.websocket import AsyncWebsocketConsumer
+import asyncio
 
 # Create your views here.
 
@@ -115,3 +117,41 @@ class UserProfileDetail(generics.RetrieveUpdateAPIView):
 
     def get_object(self):
         return self.request.user.profile
+
+class LiveTranscriptionConsumer(AsyncWebsocketConsumer):
+    async def connect(self):
+        self.speech_id = self.scope['url_route']['kwargs']['speech_id']
+        self.speech = await self.get_speech()
+        
+        if not self.speech:
+            await self.close()
+            return
+            
+        await self.accept()
+        
+        # Start transcription session
+        self.transcriber = await self.start_transcription()
+        
+    async def disconnect(self, close_code):
+        if hasattr(self, 'transcriber'):
+            await self.transcriber.close()
+    
+    async def receive(self, text_data=None, bytes_data=None):
+        """Handle incoming audio chunks"""
+        if bytes_data:
+            # Process audio chunk
+            await self.transcriber.process_audio(bytes_data)
+            
+    async def transcription_result(self, result):
+        """Handle transcription result"""
+        await self.speech.handle_transcription_result(result)
+        
+        # Send result to WebSocket
+        await self.send(text_data=json.dumps({
+            'type': 'transcription',
+            'text': result.text,
+            'is_final': result.is_final,
+            'confidence': result.confidence,
+            'words': result.words,
+            'analysis': await self.speech.get_analysis_summary()
+        }))

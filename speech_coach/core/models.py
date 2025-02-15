@@ -179,7 +179,7 @@ class UserSpeech(models.Model):
     title = models.CharField(max_length=255)
     audio_file = models.FileField(upload_to='user_speeches/')
     transcript = models.TextField(blank=True, null=True)
-    date_delivered = models.DateField(auto_now_add=True)
+    date_delivered = models.DateField(default=timezone.now)
     occasion = models.CharField(max_length=255, blank=True)
     category = models.CharField(max_length=100, blank=True)
     embedding = models.JSONField(null=True, blank=True)

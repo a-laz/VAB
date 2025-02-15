@@ -279,7 +279,7 @@ class UserSpeech(models.Model):
 
     def _count_filler_words(self, words):
         filler_words = {
-            'um': [], 'uh': [], 'like': [], 'you know': []
+            'um': [], 'uh': [], 'like': [], 'you know': [], 'so': [], 
         }
         
         for word in words:
@@ -302,7 +302,13 @@ class UserSpeech(models.Model):
         return {
             'pacing': {
                 'words_per_minute': self.words_per_minute,
-                'target_range': '120-150 wpm',
+                'target_range': '100-160 wpm',
+                'context_guidelines': {
+                    'formal_speeches': '100-120 wpm',
+                    'presentations': '100-150 wpm',
+                    'conversational': '120-150 wpm',
+                    'engaging_stories': '130-160 wpm'
+                },
                 'assessment': self._assess_pacing()
             },
             'pauses': {
@@ -324,11 +330,24 @@ class UserSpeech(models.Model):
     def _assess_pacing(self):
         if not self.words_per_minute:
             return "No pacing data available"
-        if self.words_per_minute < 120:
-            return "Speech is slower than recommended. Try to increase your pace slightly."
-        elif self.words_per_minute > 150:
-            return "Speech is faster than recommended. Try to slow down for better clarity."
-        return "Good pace! You're speaking at an ideal rate."
+        
+        # Standard speaking rates (words per minute):
+        # Conversational: 120-150 wpm
+        # Presentations: 100-150 wpm
+        # Speeches: 100-160 wpm
+        # Audiobooks: 150-170 wpm
+        # Auctioneers: 250-400 wpm
+        
+        if self.words_per_minute < 100:
+            return "Speech is too slow. Try to increase your pace to maintain audience engagement. Aim for 100-160 wpm."
+        elif self.words_per_minute < 120:
+            return "Speech pace is on the slower side but may be appropriate for complex topics or formal speeches. Current pace is good for emphasizing important points."
+        elif self.words_per_minute <= 160:
+            return "Excellent pace! You're speaking at an ideal rate for public speaking."
+        elif self.words_per_minute <= 180:
+            return "Speech is slightly fast. Consider slowing down a bit to ensure clarity, unless speaking to a highly engaged audience."
+        else:
+            return "Speech is too fast. Slow down to improve comprehension and allow your audience to process the information. Aim for 100-160 wpm."
 
     def _get_pause_suggestions(self):
         if not self.pause_duration:

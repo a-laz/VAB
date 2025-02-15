@@ -16,6 +16,7 @@ VocalAnalysisBuddy leverages AI to analyze public speaking performances by:
 - Vector similarity search for speech comparison
 - Performance metrics tracking (WPM, filler words, clarity)
 - Database of exemplary speeches
+- AI-powered feedback system
 - Personalized feedback system
 
 ## Backend Setup
@@ -23,6 +24,9 @@ VocalAnalysisBuddy leverages AI to analyze public speaking performances by:
 ### Prerequisites
 - Python 3.x
 - PostgreSQL
+- AssemblyAI API key
+- OpenAI API key
+
 
 ### Database Setup
 1. Install PostgreSQL from [postgresql.org](https://www.postgresql.org/download/)
@@ -62,9 +66,51 @@ python manage.py runserver
 The backend API will be available at `http://localhost:8000`
 
 ### API Endpoints
+Speech Management:
 - `GET/POST /api/speeches/` - List/Create user speeches
 - `GET/PUT/DELETE /api/speeches/<id>/` - Manage specific speeches
 - `GET /api/exemplary-speeches/` - List exemplary speeches
+
+Analysis & Status:
+- `GET /api/speeches/<id>/analysis/` - Get detailed speech analysis
+- `GET /api/speeches/<id>/status/` - Check processing status
+- `POST /api/speeches/<id>/retry/` - Retry failed processing
+- `GET /api/user/statistics/` - Get user's speaking statistics
+
+Each speech analysis includes:
+- Pacing (words per minute)
+- Pause detection and analysis
+- Filler word tracking
+- Clarity scoring
+- Similarity comparison with exemplary speeches
+- AI-generated feedback:
+  - Key strengths
+  - Areas for improvement
+  - Actionable recommendations
+  - Overall assessment
+
+Authentication:
+- All endpoints require user authentication
+- Responses include processing status and error messages if applicable
+
+### Speech Analysis Features
+1. Audio Processing:
+   - Automatic transcription
+   - Voice embedding generation
+   - Similarity matching
+
+2. Performance Metrics:
+   - Speaking rate (WPM)
+   - Pause analysis
+   - Filler word detection
+   - Clarity scoring
+
+3. AI Feedback:
+   - GPT-4 powered analysis
+   - Contextual recommendations
+   - Progress tracking
+   - Expert coaching insights
+
 
 ### Admin Interface
 1. Admin credentials:

@@ -135,48 +135,10 @@ export const InterviewForm = ({ onContinue }: InterviewFormProps) => {
     severity: 'success'
   });
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    
-    const payload: InterviewRequestPayload = {
-      job_role: formData.jobRole,
-      interview_type: formData.interviewType,
-      duration_minutes: parseInt(formData.duration),
-      timezone: Intl.DateTimeFormat().resolvedOptions().timeZone
-    };
-
-    try {
-      await axios.post(
-        `${API_BASE_URL}/api/interview-sessions/schedule/`,
-        payload,
-        {
-          headers: {
-            'Content-Type': 'application/json',
-            'Accept': 'application/json',
-          },
-          withCredentials: false,
-          validateStatus: (status: number) => status < 500
-        }
-      );
-
-      setNotification({
-        open: true,
-        message: 'Interview details saved successfully!',
-        severity: 'success'
-      });
-
+    if (formData.jobRole.trim()) {
       onContinue(formData);
-      
-    } catch (error) {
-      console.error('Error saving interview details:', error);
-      const apiError = error as ApiError;
-      const errorMessage = apiError.response?.data?.message || apiError.message || 'Failed to save interview details';
-      
-      setNotification({
-        open: true,
-        message: errorMessage,
-        severity: 'error'
-      });
     }
   };
 
@@ -239,7 +201,11 @@ export const InterviewForm = ({ onContinue }: InterviewFormProps) => {
             </RadioGroup>
           </FormSection>
 
-          <SubmitButton type="submit" variant="contained">
+          <SubmitButton 
+            type="submit" 
+            variant="contained"
+            disabled={!formData.jobRole.trim()}
+          >
             Continue
           </SubmitButton>
         </form>

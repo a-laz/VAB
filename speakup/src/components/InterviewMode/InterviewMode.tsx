@@ -5,9 +5,11 @@ import {
   IconButton,
   styled,
   Paper,
-  CircularProgress
+  CircularProgress,
+  Button
 } from '@mui/material';
 import { Mic, Stop } from '@mui/icons-material';
+import { WebSocketService } from '../../services/websocket';
 
 const Container = styled(Paper)`
   max-width: 800px;
@@ -85,6 +87,25 @@ const ResponseContainer = styled(Box)`
   min-height: 100px;
 `;
 
+const INTERVIEW_PROMPTS = {
+  technical: `You are an experienced technical interviewer. Ask relevant technical questions for the role, follow up on unclear answers, provide constructive feedback, stay professional and encouraging, adapt questions based on candidate's responses, and focus on specific examples.`,
+  
+  behavioral: `You are an experienced technical interviewer conducting a behavior interview for a product manager position.
+        
+Follow these guidelines:
+1. Ask relevant questions for the role
+2. Follow up on unclear or incomplete answers
+3. Provide constructive feedback
+4. Stay professional and encouraging
+5. Adapt questions based on candidate's responses
+6. Focus on specific examples and scenarios
+
+Current interview type: behavior
+Role: product manager`,
+  
+  'case study': `You are an experienced interviewer conducting a case study interview. Present relevant business cases for the role, guide the candidate through problem-solving, provide constructive feedback, stay professional and encouraging, and focus on analytical thinking and structured approach.`
+};
+
 interface InterviewModeProps {
   jobRole: string;
   interviewType: string;
@@ -94,154 +115,88 @@ export const InterviewMode = ({ jobRole, interviewType }: InterviewModeProps) =>
   const [isRecording, setIsRecording] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
   const [response, setResponse] = useState('');
-  const [questionCount, setQuestionCount] = useState(0);
-  
-  const pcRef = useRef<RTCPeerConnection | null>(null);
-  const dcRef = useRef<RTCDataChannel | null>(null);
-  const audioRef = useRef<HTMLAudioElement>(document.createElement('audio'));
-  const isConnectingRef = useRef(false);
+  const [isConnected, setIsConnected] = useState(false);
+  const [isInterviewStarted, setIsInterviewStarted] = useState(false);
+  const wsRef = useRef<WebSocketService | null>(null);
+  const isInitializedRef = useRef(false);
 
-  const getPromptForCount = (count: number) => {
-    switch (count) {
-      case 0:
-        return `I am interviewing for a Fullstack engineer position. This is a technical interview. 
-                You are an experienced technical interviewer. Start with a brief introduction and ask your first question.`;
-      case 1:
-        return `Based on my previous answer, ask a follow-up question that goes deeper into technical details. 
-                If I mentioned any specific technology, ask about its internals or best practices.`;
-      case 2:
-        return `Now ask a challenging problem-solving question related to movie actor role. 
-                Make it a practical scenario that tests both technical knowledge and problem-solving ability.`;
-      default:
-        return `Continue the interview naturally, focusing on advanced concepts and real-world scenarios. 
-                If I show expertise in a particular area, explore that further.`;
-    }
-  };
+  const initializeWebSocket = async () => {
+    if (isInitializedRef.current) return;
+    isInitializedRef.current = true;
 
-  const initializeConnection = async () => {
-    if (isConnectingRef.current || dcRef.current?.readyState === 'open') return;
-    isConnectingRef.current = true;
+    const sessionId = Math.random().toString(36).substring(7);
+    wsRef.current = new WebSocketService(sessionId);
 
     try {
-      const tokenResponse = await fetch('https://api.openai.com/v1/realtime/sessions', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer `,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          model: 'gpt-4o-realtime-preview-2024-12-17',
-          voice: 'verse',
-        })
-      });
-      const data = await tokenResponse.json();
-      const EPHEMERAL_KEY = data.client_secret.value;
-
-      pcRef.current = new RTCPeerConnection();
-      pcRef.current.ontrack = (e) => {
-        audioRef.current.srcObject = e.streams[0];
-        audioRef.current.autoplay = true;
-      };
-
-      const ms = await navigator.mediaDevices.getUserMedia({ audio: true });
-      pcRef.current.addTrack(ms.getTracks()[0]);
-
-      dcRef.current = pcRef.current.createDataChannel('oai-events');
-      
-      dcRef.current.onopen = () => isConnectingRef.current = false;
-      dcRef.current.onclose = () => {
-        setIsRecording(false);
-        setIsProcessing(false);
-      };
-      dcRef.current.onerror = () => {
-        setIsProcessing(false);
-        setIsRecording(false);
-      };
-
-      dcRef.current.addEventListener('message', (e) => {
-        try {
-          const message = JSON.parse(e.data);
+      await wsRef.current.connect(
+        (message) => {
           if (message.type === 'text.data') {
             setResponse(message.text.content);
             setIsProcessing(false);
+            setIsInterviewStarted(true);
           }
-        } catch (error) {
-          console.error('Error parsing message:', error);
-        }
-      });
-
-      const offer = await pcRef.current.createOffer();
-      await pcRef.current.setLocalDescription(offer);
-
-      const sdpResponse = await fetch(`https://api.openai.com/v1/realtime?model=gpt-4o-realtime-preview-2024-12-17`, {
-        method: 'POST',
-        body: offer.sdp,
-        headers: {
-          'Authorization': `Bearer ${EPHEMERAL_KEY}`,
-          'Content-Type': 'application/sdp'
         },
-      });
+        () => {
+          setIsProcessing(false);
+          setIsConnected(false);
+          setIsInterviewStarted(false);
+        },
+        () => {
+          setIsRecording(false);
+          setIsProcessing(false);
+          setIsConnected(false);
+          setIsInterviewStarted(false);
+        }
+      );
+      setIsConnected(true);
+      setIsProcessing(true);
 
-      await pcRef.current.setRemoteDescription({
-        type: 'answer',
-        sdp: await sdpResponse.text(),
-      });
-
-    } catch (error) {
-      isConnectingRef.current = false;
+      // Send the initial prompt and wait for the first question
+      wsRef.current?.queueMessage(
+        `${INTERVIEW_PROMPTS[interviewType as keyof typeof INTERVIEW_PROMPTS]}\n\nPlease start by introducing yourself as the interviewer and ask your first question.`
+      );
+    } catch (err) {
+      setIsConnected(false);
       setIsProcessing(false);
-      setIsRecording(false);
-      console.error('Connection error:', error);
+      setIsInterviewStarted(false);
     }
   };
 
   const startRecording = async () => {
     try {
-      await initializeConnection();
-
-      if (dcRef.current?.readyState === 'open') {
-        const prompt = getPromptForCount(questionCount);
-        console.log('Using prompt:', prompt);
-
-        const message = {
-          type: 'response.create',
-          response: {
-            modalities: ['text'],
-            instructions: prompt
-          }
-        };
-        dcRef.current.send(JSON.stringify(message));
+      if (!isConnected) {
+        await initializeWebSocket();
       }
 
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const mediaRecorder = new MediaRecorder(stream);
+      const chunks: Blob[] = [];
+
+      mediaRecorder.ondataavailable = (e) => {
+        if (e.data.size > 0) {
+          chunks.push(e.data);
+        }
+      };
+
+      mediaRecorder.onstop = () => {
+        const audioBlob = new Blob(chunks, { type: 'audio/webm' });
+        wsRef.current?.sendAudio(audioBlob);
+        setIsProcessing(true);
+      };
+
+      mediaRecorder.start();
       setIsRecording(true);
     } catch (error) {
-      console.error('Error starting recording:', error);
+      console.error('Error accessing microphone:', error);
     }
   };
 
   const stopRecording = () => {
     setIsRecording(false);
-    setQuestionCount(prev => prev + 1);
-
-    if (pcRef.current?.getSenders) {
-      pcRef.current.getSenders().forEach(sender => sender.track?.stop());
-    }
-
-    if (dcRef.current) {
-      dcRef.current.close();
-      dcRef.current = null;
-    }
-
-    if (pcRef.current) {
-      pcRef.current.close();
-      pcRef.current = null;
-    }
-
-    if (audioRef.current.srcObject instanceof MediaStream) {
-      audioRef.current.srcObject.getTracks().forEach(track => track.stop());
-    }
-    audioRef.current.srcObject = null;
-    isConnectingRef.current = false;
+    navigator.mediaDevices.getUserMedia({ audio: true })
+      .then(stream => {
+        stream.getTracks().forEach(track => track.stop());
+      });
   };
 
   const toggleRecording = () => {
@@ -252,9 +207,18 @@ export const InterviewMode = ({ jobRole, interviewType }: InterviewModeProps) =>
     }
   };
 
+  const disconnect = () => {
+    if (wsRef.current) {
+      wsRef.current.disconnect();
+      isInitializedRef.current = false;
+      setIsConnected(false);
+      setResponse('');
+    }
+  };
+
   useEffect(() => {
     return () => {
-      stopRecording();
+      disconnect();
     };
   }, []);
 
@@ -267,7 +231,7 @@ export const InterviewMode = ({ jobRole, interviewType }: InterviewModeProps) =>
       <AnimationContainer>
         <IconButton 
           onClick={toggleRecording}
-          disabled={isProcessing}
+          disabled={isProcessing || !isInterviewStarted}
           sx={{ width: 120, height: 120 }}
         >
           <WaveCircle className={isRecording ? 'active' : ''}>
@@ -287,6 +251,12 @@ export const InterviewMode = ({ jobRole, interviewType }: InterviewModeProps) =>
         )}
       </AnimationContainer>
 
+      {(!isInterviewStarted && isConnected) && (
+        <Typography align="center" color="textSecondary" sx={{ mt: 2 }}>
+          Waiting for interviewer to start the session...
+        </Typography>
+      )}
+
       {(response || isProcessing) && (
         <ResponseContainer>
           {isProcessing ? (
@@ -298,6 +268,17 @@ export const InterviewMode = ({ jobRole, interviewType }: InterviewModeProps) =>
           )}
         </ResponseContainer>
       )}
+
+      <Box sx={{ mt: 3, display: 'flex', justifyContent: 'center' }}>
+        <Button
+          variant="contained"
+          color={isConnected ? "error" : "primary"}
+          onClick={isConnected ? disconnect : initializeWebSocket}
+          sx={{ minWidth: 200 }}
+        >
+          {isConnected ? "End Interview" : "Start Interview"}
+        </Button>
+      </Box>
     </Container>
   );
 }; 

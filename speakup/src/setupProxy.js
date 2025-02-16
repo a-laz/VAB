@@ -4,13 +4,26 @@ module.exports = function (app) {
     app.use(
         '/api',
         createProxyMiddleware({
-            target: process.env.REACT_APP_API_BASE_URL || 'http://localhost:8000',
+            target: 'http://localhost:8000',
             changeOrigin: true,
             ws: true,
-            onProxyRes: function (proxyRes, req, res) {
-                proxyRes.headers['Access-Control-Allow-Origin'] = '*';
-                proxyRes.headers['Access-Control-Allow-Methods'] = 'GET,POST,PUT,DELETE,OPTIONS';
-                proxyRes.headers['Access-Control-Allow-Headers'] = 'Content-Type, Authorization';
+            pathRewrite: {
+                '^/api': '/api'
+            },
+            onProxyReq: (proxyReq, req, res) => {
+                // Log outgoing requests
+                console.log('Proxying request:', req.method, req.path);
+            },
+            onProxyRes: (proxyRes, req, res) => {
+                // Log responses
+                console.log('Received response:', proxyRes.statusCode, req.path);
+            },
+            onError: (err, req, res) => {
+                console.error('Proxy Error:', err);
+                res.status(500).json({
+                    error: 'Proxy Error',
+                    message: err.message
+                });
             }
         })
     );

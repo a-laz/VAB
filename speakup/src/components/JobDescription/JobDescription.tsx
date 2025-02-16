@@ -62,36 +62,43 @@ interface JobDescriptionProps {
 export const JobDescription = ({ onContinue }: JobDescriptionProps) => {
   const [description, setDescription] = useState('');
 
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    onContinue(description);
+  };
+
   return (
     <Container elevation={2}>
-      <Typography variant="h5" align="center" gutterBottom fontWeight="bold">
-        Job Description
-      </Typography>
-      
-      <IconWrapper>
-        <StyledIcon />
-      </IconWrapper>
+      <form onSubmit={handleSubmit}>
+        <Typography variant="h5" align="center" gutterBottom fontWeight="bold">
+          Job Description
+        </Typography>
+        
+        <IconWrapper>
+          <StyledIcon />
+        </IconWrapper>
 
-      <Typography variant="body1" gutterBottom align="center">
-        Adding a job description helps tailor the interview to your specific role (optional)
-      </Typography>
+        <Typography variant="body1" gutterBottom align="center">
+          Adding a job description helps tailor the interview to your specific role (optional)
+        </Typography>
 
-      <TextField
-        multiline
-        rows={6}
-        fullWidth
-        placeholder="Paste your job description here..."
-        value={description}
-        onChange={(e) => setDescription(e.target.value)}
-        sx={{ marginTop: 2 }}
-      />
+        <TextField
+          multiline
+          rows={6}
+          fullWidth
+          placeholder="Paste your job description here..."
+          value={description}
+          onChange={(e) => setDescription(e.target.value)}
+          sx={{ marginTop: 2 }}
+        />
 
-      <ActionButton 
-        variant="contained"
-        onClick={() => onContinue(description)}
-      >
-        Start Interview
-      </ActionButton>
+        <ActionButton 
+          type="submit"
+          variant="contained"
+        >
+          Start Interview
+        </ActionButton>
+      </form>
     </Container>
   );
 }; 

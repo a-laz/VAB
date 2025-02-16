@@ -1,12 +1,11 @@
 import React, { useState } from 'react';
-import { Box, Button, Typography, styled, useMediaQuery, useTheme } from '@mui/material';
+import { Box, styled } from '@mui/material';
 import { Navbar } from './components/Navbar/Navbar';
 import { Sidebar } from './components/Sidebar/Sidebar';
 import { InterviewForm } from './components/InterviewForm/InterviewForm';
-import { ResumeUpload } from './components/ResumeUpload/ResumeUpload';
+import { FileUpload } from './components/FileUpload/FileUpload';
 import { JobDescription } from './components/JobDescription/JobDescription';
 import { InterviewMode } from './components/InterviewMode/InterviewMode';
-import { FileUpload } from './components/FileUpload/FileUpload';
 
 const MainContainer = styled(Box)`
   display: flex;
@@ -29,41 +28,10 @@ const ContentArea = styled(Box)`
   }
 `;
 
-const WelcomeSection = styled(Box)`
-  text-align: center;
-  max-width: 600px;
-  padding: ${({ theme }) => theme.spacing(2)};
-  
-  @media (max-width: 600px) {
-    padding: ${({ theme }) => theme.spacing(1)};
-  }
-`;
-
-const WelcomeImage = styled(Box)`
-  width: 200px;
-  height: 200px;
-  background: linear-gradient(45deg, #2196f3, #673ab7);
-  border-radius: 50%;
-  margin: 48px auto;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-`;
-
-const ActionButton = styled(Button)`
-  background-color: #2196f3;
-  color: white;
-  padding: 12px 32px;
-  font-size: 1.1rem;
-  border-radius: 24px;
-  text-transform: none;
-  
-  &:hover {
-    background-color: #1976d2;
-  }
-`;
-
 enum Screen {
+  INTERVIEW_FORM,
+  FILE_UPLOAD,
+  JOB_DESCRIPTION,
   INTERVIEW_MODE
 }
 
@@ -74,20 +42,44 @@ interface InterviewFormData {
 }
 
 function App() {
-  const [currentScreen] = useState<Screen>(Screen.INTERVIEW_MODE);
-  const [formData] = useState<InterviewFormData>({
-    jobRole: 'Software Engineer',
+  const [currentScreen, setCurrentScreen] = useState<Screen>(Screen.INTERVIEW_FORM);
+  const [formData, setFormData] = useState<InterviewFormData>({
+    jobRole: '',
     interviewType: 'technical',
     duration: '15'
   });
 
   const renderContent = () => {
-    return (
-      <InterviewMode 
-        jobRole={formData.jobRole} 
-        interviewType={formData.interviewType}
-      />
-    );
+    switch (currentScreen) {
+      case Screen.INTERVIEW_FORM:
+        return (
+          <InterviewForm 
+            onContinue={(data) => {
+              setFormData(data);
+              setCurrentScreen(Screen.FILE_UPLOAD);
+            }}
+          />
+        );
+      case Screen.FILE_UPLOAD:
+        return (
+          <FileUpload 
+            onComplete={() => setCurrentScreen(Screen.JOB_DESCRIPTION)}
+          />
+        );
+      case Screen.JOB_DESCRIPTION:
+        return (
+          <JobDescription 
+            onContinue={() => setCurrentScreen(Screen.INTERVIEW_MODE)}
+          />
+        );
+      case Screen.INTERVIEW_MODE:
+        return (
+          <InterviewMode 
+            jobRole={formData.jobRole} 
+            interviewType={formData.interviewType}
+          />
+        );
+    }
   };
 
   return (

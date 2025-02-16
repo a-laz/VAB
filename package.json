@@ -1,0 +1,13 @@
+{
+  "name": "vab",
+  "version": "1.0.0",
+  "description": "An AI-powered public speaking coach that provides real-time feedback and analysis to help users improve their presentation skills.",
+  "main": "server.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "node server.js"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC"
+}

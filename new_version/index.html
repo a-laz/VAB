@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Voice ChatGPT</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+
+        .chat-container {
+            background-color: white;
+            border-radius: 10px;
+            padding: 20px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        }
+
+        .chat-history {
+            height: 400px;
+            overflow-y: auto;
+            margin-bottom: 20px;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+
+        .message {
+            margin: 10px 0;
+            padding: 10px;
+            border-radius: 5px;
+        }
+
+        .user-message {
+            background-color: #e3f2fd;
+            margin-left: 20%;
+        }
+
+        .assistant-message {
+            background-color: #f5f5f5;
+            margin-right: 20%;
+        }
+
+        .controls {
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+        }
+
+        button {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 5px;
+            background-color: #2196f3;
+            color: white;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+
+        button:hover {
+            background-color: #1976d2;
+        }
+
+        button:disabled {
+            background-color: #ccc;
+            cursor: not-allowed;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="chat-container">
+        <h1>Voice ChatGPT</h1>
+        <div class="chat-history" id="chatHistory"></div>
+        <div class="controls">
+            <button id="startRecording">Start Recording</button>
+            <button id="stopRecording" disabled>Stop Recording</button>
+        </div>
+    </div>
+
+    <script>
+        let mediaRecorder;
+        let audioChunks = [];
+        let isRecording = false;
+
+        const startButton = document.getElementById('startRecording');
+        const stopButton = document.getElementById('stopRecording');
+        const chatHistory = document.getElementById('chatHistory');
+
+        async function startRecording() {
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                mediaRecorder = new MediaRecorder(stream);
+
+                mediaRecorder.ondataavailable = (event) => {
+                    audioChunks.push(event.data);
+                };
+
+                mediaRecorder.onstop = async () => {
+                    const audioBlob = new Blob(audioChunks, { type: 'audio/webm' });
+                    await processAudio(audioBlob);
+                    audioChunks = [];
+                };
+
+                mediaRecorder.start();
+                isRecording = true;
+                startButton.disabled = true;
+                stopButton.disabled = false;
+            } catch (err) {
+                console.error('Error accessing microphone:', err);
+                alert('Error accessing microphone. Please ensure you have granted microphone permissions.');
+            }
+        }
+
+        function stopRecording() {
+            mediaRecorder.stop();
+            isRecording = false;
+            startButton.disabled = false;
+            stopButton.disabled = true;
+        }
+
+        async function processAudio(audioBlob) {
+            const reader = new FileReader();
+            reader.readAsDataURL(audioBlob);
+
+            reader.onloadend = async () => {
+                const base64Audio = reader.result;
+
+                try {
+                    // First, transcribe the audio
+                    const transcribeResponse = await fetch('http://localhost:5000/transcribe', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({ audio: base64Audio }),
+                    });
+
+                    const transcribeData = await transcribeResponse.json();
+                    if (transcribeData.error) throw new Error(transcribeData.error);
+
+                    // Add user message to chat
+                    addMessage(transcribeData.text, 'user');
+
+                    // Then, get ChatGPT response
+                    const chatResponse = await fetch('http://localhost:5000/chat', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({ message: transcribeData.text }),
+                    });
+
+                    const chatData = await chatResponse.json();
+                    if (chatData.error) throw new Error(chatData.error);
+
+                    // Add assistant message to chat
+                    addMessage(chatData.text, 'assistant');
+
+                    // Play audio response
+                    const audio = new Audio(chatData.audio);
+                    audio.play();
+
+                } catch (error) {
+                    console.error('Error processing audio:', error);
+                    alert('Error processing audio: ' + error.message);
+                }
+            };
+        }
+
+        function addMessage(text, role) {
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `message ${role}-message`;
+            messageDiv.textContent = text;
+            chatHistory.appendChild(messageDiv);
+            chatHistory.scrollTop = chatHistory.scrollHeight;
+        }
+
+        startButton.addEventListener('click', startRecording);
+        stopButton.addEventListener('click', stopRecording);
+    </script>
+</body>
+
+</html>

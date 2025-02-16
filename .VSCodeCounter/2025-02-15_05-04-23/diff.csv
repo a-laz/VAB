@@ -1,0 +1,9 @@
+"filename", "language", "Markdown", "Python", "comment", "blank", "total"
+"c:\Users\Davin\VocalAnalysisBuddy\README.md", "Markdown", 153, 0, 0, 33, 186
+"c:\Users\Davin\VocalAnalysisBuddy\speech_coach\core\models.py", "Python", 0, 57, 10, 16, 83
+"c:\Users\Davin\VocalAnalysisBuddy\speech_coach\core\routing.py", "Python", 0, 8, 0, 1, 9
+"c:\Users\Davin\VocalAnalysisBuddy\speech_coach\core\serializers.py", "Python", 0, 52, 1, 8, 61
+"c:\Users\Davin\VocalAnalysisBuddy\speech_coach\core\views.py", "Python", 0, 29, 3, 8, 40
+"c:\Users\Davin\VocalAnalysisBuddy\speech_coach\speech_coach\asgi.py", "Python", 0, 10, 0, -1, 9
+"c:\Users\Davin\VocalAnalysisBuddy\speech_coach\speech_coach\settings.py", "Python", 0, 7, 2, 2, 11
+"Total", "-", 153, 163, 16, 67, 399

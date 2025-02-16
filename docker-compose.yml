@@ -1,0 +1,30 @@
+version: '3.8'
+
+services:
+  web:
+    build: .
+    command: python manage.py runserver 0.0.0.0:8000
+    volumes:
+      - ./speech_coach:/app
+    ports:
+      - "8000:8000"
+    environment:
+      - ASSEMBLYAI_API_KEY=${ASSEMBLYAI_API_KEY}
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - DATABASE_URL=postgresql://postgres:RexDad_1@db:5432/speech_coach_db
+    depends_on:
+      - db
+
+  db:
+    image: postgres:13
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    environment:
+      - POSTGRES_DB=speech_coach_db
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=RexDad_1
+    ports:
+      - "5432:5432"
+
+volumes:
+  postgres_data:

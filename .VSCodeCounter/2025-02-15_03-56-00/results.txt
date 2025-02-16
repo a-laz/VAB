@@ -1,0 +1,52 @@
+Date : 2025-02-15 03:56:00
+Directory : c:\Users\Davin\VocalAnalysisBuddy
+Total : 20 files,  945 codes, 72 comments, 245 blanks, all 1262 lines
+
+Languages
++----------+------------+------------+------------+------------+------------+
+| language | files      | code       | comment    | blank      | total      |
++----------+------------+------------+------------+------------+------------+
+| Python   |         19 |        832 |         72 |        215 |      1,119 |
+| Markdown |          1 |        113 |          0 |         30 |        143 |
++----------+------------+------------+------------+------------+------------+
+
+Directories
++-----------------------------------------------------------------------------------------------------------------------------+------------+------------+------------+------------+------------+
+| path                                                                                                                        | files      | code       | comment    | blank      | total      |
++-----------------------------------------------------------------------------------------------------------------------------+------------+------------+------------+------------+------------+
+| .                                                                                                                           |         20 |        945 |         72 |        245 |      1,262 |
+| . (Files)                                                                                                                   |          1 |        113 |          0 |         30 |        143 |
+| speech_coach                                                                                                                |         19 |        832 |         72 |        215 |      1,119 |
+| speech_coach (Files)                                                                                                        |          1 |         17 |          1 |          5 |         23 |
+| speech_coach\core                                                                                                           |         13 |        681 |         53 |        154 |        888 |
+| speech_coach\core (Files)                                                                                                   |          8 |        584 |         49 |        128 |        761 |
+| speech_coach\core\migrations                                                                                                |          5 |         97 |          4 |         26 |        127 |
+| speech_coach\speech_coach                                                                                                   |          5 |        134 |         18 |         56 |        208 |
++-----------------------------------------------------------------------------------------------------------------------------+------------+------------+------------+------------+------------+
+
+Files
++-----------------------------------------------------------------------------------------------------------------------------+----------+------------+------------+------------+------------+
+| filename                                                                                                                    | language | code       | comment    | blank      | total      |
++-----------------------------------------------------------------------------------------------------------------------------+----------+------------+------------+------------+------------+
+| c:\Users\Davin\VocalAnalysisBuddy\README.md                                                                                 | Markdown |        113 |          0 |         30 |        143 |
+| c:\Users\Davin\VocalAnalysisBuddy\speech_coach\core\__init__.py                                                             | Python   |          0 |          0 |          1 |          1 |
+| c:\Users\Davin\VocalAnalysisBuddy\speech_coach\core\admin.py                                                                | Python   |         16 |          0 |          4 |         20 |
+| c:\Users\Davin\VocalAnalysisBuddy\speech_coach\core\apps.py                                                                 | Python   |          4 |          0 |          3 |          7 |
+| c:\Users\Davin\VocalAnalysisBuddy\speech_coach\core\migrations\0001_initial.py                                              | Python   |         44 |          1 |          7 |         52 |
+| c:\Users\Davin\VocalAnalysisBuddy\speech_coach\core\migrations\0002_userprofile.py                                          | Python   |         24 |          1 |          6 |         31 |
+| c:\Users\Davin\VocalAnalysisBuddy\speech_coach\core\migrations\0003_alter_exemplaryspeech_transcript.py                     | Python   |         12 |          1 |          6 |         19 |
+| c:\Users\Davin\VocalAnalysisBuddy\speech_coach\core\migrations\0004_exemplaryspeech_error_message_exemplaryspeech_status.py | Python   |         17 |          1 |          6 |         24 |
+| c:\Users\Davin\VocalAnalysisBuddy\speech_coach\core\migrations\__init__.py                                                  | Python   |          0 |          0 |          1 |          1 |
+| c:\Users\Davin\VocalAnalysisBuddy\speech_coach\core\models.py                                                               | Python   |        434 |         46 |         92 |        572 |
+| c:\Users\Davin\VocalAnalysisBuddy\speech_coach\core\serializers.py                                                          | Python   |         20 |          0 |          6 |         26 |
+| c:\Users\Davin\VocalAnalysisBuddy\speech_coach\core\tests.py                                                                | Python   |          1 |          1 |          2 |          4 |
+| c:\Users\Davin\VocalAnalysisBuddy\speech_coach\core\urls.py                                                                 | Python   |         11 |          0 |          2 |         13 |
+| c:\Users\Davin\VocalAnalysisBuddy\speech_coach\core\views.py                                                                | Python   |         98 |          2 |         18 |        118 |
+| c:\Users\Davin\VocalAnalysisBuddy\speech_coach\manage.py                                                                    | Python   |         17 |          1 |          5 |         23 |
+| c:\Users\Davin\VocalAnalysisBuddy\speech_coach\speech_coach\__init__.py                                                     | Python   |          0 |          0 |          1 |          1 |
+| c:\Users\Davin\VocalAnalysisBuddy\speech_coach\speech_coach\asgi.py                                                         | Python   |         10 |          0 |          7 |         17 |
+| c:\Users\Davin\VocalAnalysisBuddy\speech_coach\speech_coach\settings.py                                                     | Python   |         91 |         18 |         38 |        147 |
+| c:\Users\Davin\VocalAnalysisBuddy\speech_coach\speech_coach\urls.py                                                         | Python   |         23 |          0 |          3 |         26 |
+| c:\Users\Davin\VocalAnalysisBuddy\speech_coach\speech_coach\wsgi.py                                                         | Python   |         10 |          0 |          7 |         17 |
+| Total                                                                                                                       |          |        945 |         72 |        245 |      1,262 |
++-----------------------------------------------------------------------------------------------------------------------------+----------+------------+------------+------------+------------+
